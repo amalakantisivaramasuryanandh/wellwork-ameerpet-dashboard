@@ -1,0 +1,1061 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  >
+
+  <title>WellWork Ameerpet Dashboard</title>
+
+  <style>
+    :root {
+      --green:#1f7a46;
+      --dark:#19271f;
+      --muted:#6d7a70;
+      --border:#e2e7e3;
+      --background:#f4f2ea;
+      --occupied:#dcefe0;
+      --vacant:#f4e2d8;
+      --sharing:#f6ecd4;
+    }
+
+    * {
+      box-sizing:border-box;
+    }
+
+    body {
+      margin:0;
+      color:var(--dark);
+      background:linear-gradient(
+        #edf4ee,
+        var(--background) 240px
+      );
+      font-family:Arial,sans-serif;
+    }
+
+    .page {
+      max-width:1200px;
+      margin:auto;
+      padding:24px 18px 60px;
+    }
+
+    header {
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      flex-wrap:wrap;
+      gap:14px;
+      padding-bottom:15px;
+      border-bottom:2px solid var(--green);
+    }
+
+    h1 {
+      margin:0;
+    }
+
+    .muted {
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    button,
+    input {
+      padding:8px 11px;
+      border:1px solid var(--border);
+      border-radius:8px;
+      background:white;
+    }
+
+    button {
+      cursor:pointer;
+      font-weight:bold;
+    }
+
+    button.active,
+    #refresh {
+      color:white;
+      background:var(--green);
+    }
+
+    .controls {
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    .tabs {
+      display:flex;
+      gap:7px;
+      margin:18px 0 12px;
+    }
+
+    .panel {
+      display:none;
+    }
+
+    .panel.active {
+      display:block;
+    }
+
+    .kpis {
+      display:grid;
+      grid-template-columns:repeat(6,1fr);
+      gap:12px;
+      margin-bottom:14px;
+    }
+
+    .card,
+    .kpi {
+      padding:15px;
+      background:white;
+      border:1px solid var(--border);
+      border-radius:12px;
+    }
+
+    .kpi-label {
+      color:var(--muted);
+      font-size:11px;
+      font-weight:bold;
+      text-transform:uppercase;
+    }
+
+    .kpi-value {
+      margin-top:6px;
+      font-size:26px;
+      font-weight:bold;
+    }
+
+    .grid {
+      display:grid;
+      grid-template-columns:1.3fr 1fr;
+      gap:14px;
+    }
+
+    .block {
+      display:grid;
+      grid-template-columns:60px 1fr;
+      gap:8px;
+      margin:12px 0;
+    }
+
+    .cabins {
+      display:flex;
+      flex-wrap:wrap;
+      gap:7px;
+    }
+
+    .cabin {
+      width:76px;
+      min-height:58px;
+      padding:7px;
+      border-radius:8px;
+    }
+
+    .Occupied {
+      background:var(--occupied);
+    }
+
+    .Vacant {
+      background:var(--vacant);
+    }
+
+    .Sharing {
+      background:var(--sharing);
+    }
+
+    .leaving {
+      outline:2px solid #cf6a2a;
+    }
+
+    .bar {
+      display:grid;
+      grid-template-columns:55px 1fr 70px;
+      align-items:center;
+      gap:8px;
+      margin:10px 0;
+    }
+
+    .track {
+      height:18px;
+      background:#edf0ed;
+      border-radius:5px;
+      overflow:hidden;
+    }
+
+    .fill {
+      height:100%;
+      background:var(--green);
+    }
+
+    .tools {
+      display:flex;
+      gap:7px;
+      flex-wrap:wrap;
+      margin:15px 0;
+    }
+
+    #search {
+      margin-left:auto;
+      min-width:230px;
+    }
+
+    .table-container {
+      overflow:auto;
+    }
+
+    table {
+      width:100%;
+      border-collapse:collapse;
+      font-size:12px;
+    }
+
+    th,
+    td {
+      padding:9px 8px;
+      border-bottom:1px solid var(--border);
+      text-align:left;
+      white-space:nowrap;
+    }
+
+    th {
+      color:var(--muted);
+      font-size:10px;
+      text-transform:uppercase;
+    }
+
+    .status {
+      display:inline-block;
+      padding:3px 9px;
+      border-radius:14px;
+      font-weight:bold;
+    }
+
+    .error {
+      display:none;
+      margin:12px 0;
+      padding:12px;
+      color:#9b2520;
+      background:#fde8e6;
+      border-radius:8px;
+    }
+
+    @media(max-width:900px) {
+      .kpis {
+        grid-template-columns:repeat(3,1fr);
+      }
+
+      .grid {
+        grid-template-columns:1fr;
+      }
+    }
+
+    @media(max-width:550px) {
+      .kpis {
+        grid-template-columns:repeat(2,1fr);
+      }
+
+      #search {
+        margin-left:0;
+        width:100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+  <header>
+    <div>
+      <h1>WELLWORK, Ameerpet</h1>
+      <div class="muted">
+        Live Google Sheets dashboard
+      </div>
+    </div>
+
+    <div class="controls">
+      <label>
+        Manager Cabin seats
+        <input
+          id="multiplier"
+          type="number"
+          value="3"
+          min="0"
+          style="width:65px"
+        >
+      </label>
+
+      <button id="current" class="active">
+        Current
+      </button>
+
+      <button id="projected">
+        Projected
+      </button>
+
+      <button id="refresh">
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  <p id="source" class="muted">
+    Connecting to Google Sheets…
+  </p>
+
+  <div id="error" class="error"></div>
+
+  <nav class="tabs">
+    <button
+      class="active"
+      data-panel="occupancy"
+    >
+      Occupancy
+    </button>
+
+    <button data-panel="contracts">
+      POC &amp; Contracts
+    </button>
+  </nav>
+
+  <section id="occupancy" class="panel active">
+    <div id="kpis" class="kpis"></div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Floor map</h2>
+        <div class="muted">
+          Billed seats / capacity
+        </div>
+        <div id="floor"></div>
+      </div>
+
+      <div class="card">
+        <h2>Utilisation by block</h2>
+        <div id="bars"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2>All cabins</h2>
+
+      <div class="tools">
+        <button data-filter="all" class="active">
+          All
+        </button>
+        <button data-filter="Occupied">
+          Occupied
+        </button>
+        <button data-filter="Vacant">
+          Vacant
+        </button>
+        <button data-filter="Sharing">
+          Sharing
+        </button>
+        <button data-filter="leaving">
+          Vacating
+        </button>
+        <button data-filter="under">
+          Under-billed
+        </button>
+
+        <input
+          id="search"
+          placeholder="Search cabin or company"
+        >
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Cabin</th>
+              <th>Company</th>
+              <th>Capacity</th>
+              <th>Billed</th>
+              <th>Status</th>
+              <th>Upcoming change</th>
+            </tr>
+          </thead>
+
+          <tbody id="unitRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="contracts" class="panel">
+    <div id="contractKpis" class="kpis"></div>
+
+    <div class="card">
+      <h2>Contacts and contracts</h2>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Cabin</th>
+              <th>Company</th>
+              <th>POC</th>
+              <th>Contact</th>
+              <th>Email</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Contract</th>
+            </tr>
+          </thead>
+
+          <tbody id="contractRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  const SCRIPT_URL =
+    "PASTE_APPS_SCRIPT_EXEC_URL";
+
+  const REFRESH_TIME = 60000;
+
+  let data = {
+    units: [],
+    sharing: []
+  };
+
+  let multiplier = 3;
+  let projected = false;
+  let filter = "all";
+  let search = "";
+  let requestId = 0;
+
+  const element = id =>
+    document.getElementById(id);
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/[&<>"']/g, character => ({
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        '"':"&quot;",
+        "'":"&#39;"
+      })[character]);
+  }
+
+  function loadData() {
+    if (SCRIPT_URL.includes("PASTE_")) {
+      showError(
+        "Add the Apps Script /exec URL in index.html."
+      );
+      return;
+    }
+
+    const callback =
+      "__wellwork" + (++requestId);
+
+    const script =
+      document.createElement("script");
+
+    const timeout = setTimeout(() => {
+      complete("Request timed out.");
+    }, 15000);
+
+    window[callback] = response => {
+      if (!response || response.ok !== true) {
+        complete(
+          response?.error ||
+          "Google Sheets returned an error."
+        );
+        return;
+      }
+
+      data.units =
+        response.units.map(convertUnit);
+
+      data.sharing = response.sharing;
+
+      element("source").textContent =
+        "Updated " +
+        new Date(
+          response.generatedAt
+        ).toLocaleString("en-IN");
+
+      element("error").style.display = "none";
+
+      render();
+      complete();
+    };
+
+    function complete(error) {
+      clearTimeout(timeout);
+      script.remove();
+      delete window[callback];
+
+      if (error) showError(error);
+    }
+
+    script.onerror = () =>
+      complete("Cannot reach Apps Script.");
+
+    script.src =
+      SCRIPT_URL +
+      "?callback=" +
+      encodeURIComponent(callback) +
+      "&time=" +
+      Date.now();
+
+    document.head.appendChild(script);
+  }
+
+  function showError(message) {
+    element("error").textContent = message;
+    element("error").style.display = "block";
+    element("source").textContent =
+      "Not connected";
+  }
+
+  function convertUnit(row, index) {
+    const status =
+      normalizeStatus(row.Status);
+
+    const billed =
+      status === "Vacant"
+        ? 0
+        : number(row["Billed Seats"]);
+
+    const change =
+      String(
+        row["Upcoming Change"] || ""
+      ).trim();
+
+    let leaving = 0;
+
+    if (change) {
+      if (status === "Sharing") {
+        const match = change.match(/^(\d+)/);
+        leaving = match ? Number(match[1]) : 0;
+      } else {
+        leaving = billed;
+      }
+    }
+
+    return {
+      no:index + 1,
+      cabin:String(
+        row["Cabin Number"] || ""
+      ).trim(),
+
+      company:String(
+        row["Company / Occupant"] || "-"
+      ).trim(),
+
+      status,
+      block:blockOf(row["Cabin Number"]),
+      open:number(row["Open Seats"]),
+      managers:number(row["Manager Cabins"]),
+      billed,
+      leaving,
+      change,
+
+      start:row["Contract Start"] || null,
+      end:row["Contract End"] || null,
+      contact:row.Contact || "",
+      email:row.Email || "",
+      poc:row.POC || ""
+    };
+  }
+
+  function normalizeStatus(value) {
+    const status =
+      String(value || "").toLowerCase();
+
+    if (
+      status === "occupied" ||
+      status === "o"
+    ) return "Occupied";
+
+    if (
+      status === "sharing" ||
+      status === "shared"
+    ) return "Sharing";
+
+    return "Vacant";
+  }
+
+  function number(value) {
+    const result =
+      Number(
+        String(value || "")
+          .replace(/,/g, "")
+      );
+
+    return Number.isFinite(result)
+      ? result
+      : 0;
+  }
+
+  function blockOf(cabin) {
+    const match =
+      String(cabin || "")
+        .match(/L1-(\d{4})/i);
+
+    return match ? match[1] : "Other";
+  }
+
+  function capacity(unit) {
+    return unit.open +
+      unit.managers * multiplier;
+  }
+
+  function billed(unit) {
+    return projected
+      ? Math.max(
+          0,
+          unit.billed - unit.leaving
+        )
+      : unit.billed;
+  }
+
+  function currentStatus(unit) {
+    if (
+      projected &&
+      unit.status !== "Sharing" &&
+      unit.leaving > 0 &&
+      unit.leaving >= unit.billed
+    ) {
+      return "Vacant";
+    }
+
+    return unit.status;
+  }
+
+  function statistics() {
+    const result = {
+      capacity:0,
+      billed:0,
+      occupied:0,
+      vacant:0,
+      sharing:0,
+      leaving:0
+    };
+
+    data.units.forEach(unit => {
+      result.capacity += capacity(unit);
+      result.billed += billed(unit);
+      result.leaving += unit.leaving;
+
+      const status =
+        currentStatus(unit).toLowerCase();
+
+      result[status]++;
+    });
+
+    result.open =
+      Math.max(
+        0,
+        result.capacity - result.billed
+      );
+
+    result.utilisation =
+      result.capacity
+        ? Math.round(
+            result.billed /
+            result.capacity *
+            100
+          )
+        : 0;
+
+    return result;
+  }
+
+  function render() {
+    renderKpis();
+    renderFloor();
+    renderBars();
+    renderUnits();
+    renderContracts();
+  }
+
+  function renderKpis() {
+    const stats = statistics();
+
+    const cards = [
+      ["Utilisation", stats.utilisation + "%"],
+      ["Billed seats", stats.billed],
+      ["Open capacity", stats.open],
+      ["Occupied", stats.occupied],
+      ["Sharing", stats.sharing],
+      ["Leaving seats", stats.leaving]
+    ];
+
+    element("kpis").innerHTML =
+      cards.map(card => `
+        <div class="kpi">
+          <div class="kpi-label">
+            ${escapeHtml(card[0])}
+          </div>
+
+          <div class="kpi-value">
+            ${escapeHtml(card[1])}
+          </div>
+        </div>
+      `).join("");
+  }
+
+  function renderFloor() {
+    const blocks =
+      [...new Set(
+        data.units.map(unit => unit.block)
+      )];
+
+    element("floor").innerHTML =
+      blocks.map(block => {
+        const cabins =
+          data.units
+            .filter(unit =>
+              unit.block === block
+            )
+            .map(unit => {
+              const status =
+                currentStatus(unit);
+
+              return `
+                <div class="cabin
+                  ${escapeHtml(status)}
+                  ${unit.leaving ? "leaving" : ""}
+                ">
+                  <strong>
+                    ${escapeHtml(unit.cabin)}
+                  </strong>
+
+                  <div>
+                    ${billed(unit)}/
+                    ${capacity(unit)}
+                  </div>
+
+                  <small>
+                    ${escapeHtml(status)}
+                  </small>
+                </div>
+              `;
+            }).join("");
+
+        return `
+          <div class="block">
+            <strong>${escapeHtml(block)}</strong>
+            <div class="cabins">${cabins}</div>
+          </div>
+        `;
+      }).join("");
+  }
+
+  function renderBars() {
+    const blocks =
+      [...new Set(
+        data.units.map(unit => unit.block)
+      )];
+
+    element("bars").innerHTML =
+      blocks.map(block => {
+        const units =
+          data.units.filter(
+            unit => unit.block === block
+          );
+
+        const capacityTotal =
+          units.reduce(
+            (sum, unit) =>
+              sum + capacity(unit),
+            0
+          );
+
+        const billedTotal =
+          units.reduce(
+            (sum, unit) =>
+              sum + billed(unit),
+            0
+          );
+
+        const percentage =
+          capacityTotal
+            ? Math.round(
+                billedTotal /
+                capacityTotal *
+                100
+              )
+            : 0;
+
+        return `
+          <div class="bar">
+            <strong>${escapeHtml(block)}</strong>
+
+            <div class="track">
+              <div
+                class="fill"
+                style="width:${Math.min(
+                  100,
+                  percentage
+                )}%"
+              ></div>
+            </div>
+
+            <span>
+              ${billedTotal}/${capacityTotal}
+            </span>
+          </div>
+        `;
+      }).join("");
+  }
+
+  function renderUnits() {
+    let units = data.units.slice();
+
+    if (filter === "leaving") {
+      units = units.filter(
+        unit => unit.leaving > 0
+      );
+    } else if (filter === "under") {
+      units = units.filter(unit =>
+        currentStatus(unit) !== "Vacant" &&
+        billed(unit) < capacity(unit)
+      );
+    } else if (filter !== "all") {
+      units = units.filter(
+        unit =>
+          currentStatus(unit) === filter
+      );
+    }
+
+    if (search) {
+      units = units.filter(unit =>
+        (
+          unit.cabin + " " + unit.company
+        ).toLowerCase().includes(search)
+      );
+    }
+
+    element("unitRows").innerHTML =
+      units.map(unit => {
+        const status =
+          currentStatus(unit);
+
+        return `
+          <tr>
+            <td>
+              <strong>
+                ${escapeHtml(unit.cabin)}
+              </strong>
+            </td>
+
+            <td>${escapeHtml(unit.company)}</td>
+            <td>${capacity(unit)}</td>
+            <td>${billed(unit)}</td>
+
+            <td>
+              <span class="status ${status}">
+                ${escapeHtml(status)}
+              </span>
+            </td>
+
+            <td>
+              ${escapeHtml(unit.change || "—")}
+            </td>
+          </tr>
+        `;
+      }).join("");
+  }
+
+  function contractStatus(end) {
+    if (!end) return "Missing";
+
+    const days =
+      (
+        new Date(end + "T00:00:00") -
+        new Date().setHours(0,0,0,0)
+      ) / 86400000;
+
+    if (days < 0) return "Expired";
+    if (days <= 60) return "Expiring";
+    return "Active";
+  }
+
+  function renderContracts() {
+    const rows = [];
+
+    data.units.forEach(unit => {
+      if (unit.status === "Vacant") return;
+
+      if (unit.status === "Sharing") {
+        data.sharing.forEach(member => {
+          rows.push({
+            cabin:unit.cabin,
+            company:
+              member["Member / Company"],
+            poc:member.POC,
+            contact:member.Contact,
+            email:member.Email,
+            start:member["Contract Start"],
+            end:member["Contract End"]
+          });
+        });
+      } else {
+        rows.push(unit);
+      }
+    });
+
+    const counts = {
+      Active:0,
+      Expiring:0,
+      Expired:0,
+      Missing:0
+    };
+
+    rows.forEach(row => {
+      counts[
+        contractStatus(row.end)
+      ]++;
+    });
+
+    element("contractKpis").innerHTML =
+      Object.entries(counts)
+        .map(([name,value]) => `
+          <div class="kpi">
+            <div class="kpi-label">
+              ${escapeHtml(name)}
+            </div>
+            <div class="kpi-value">
+              ${value}
+            </div>
+          </div>
+        `).join("");
+
+    element("contractRows").innerHTML =
+      rows.map(row => {
+        const status =
+          contractStatus(row.end);
+
+        return `
+          <tr>
+            <td>${escapeHtml(row.cabin)}</td>
+            <td>${escapeHtml(row.company)}</td>
+            <td>${escapeHtml(row.poc || "—")}</td>
+            <td>${escapeHtml(row.contact || "—")}</td>
+            <td>${escapeHtml(row.email || "—")}</td>
+            <td>${escapeHtml(row.start || "—")}</td>
+            <td>${escapeHtml(row.end || "—")}</td>
+            <td>
+              <span class="status ${status}">
+                ${escapeHtml(status)}
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join("");
+  }
+
+  document
+    .querySelectorAll("[data-panel]")
+    .forEach(button => {
+      button.addEventListener("click", () => {
+        document
+          .querySelectorAll("[data-panel]")
+          .forEach(item =>
+            item.classList.toggle(
+              "active",
+              item === button
+            )
+          );
+
+        document
+          .querySelectorAll(".panel")
+          .forEach(panel =>
+            panel.classList.toggle(
+              "active",
+              panel.id ===
+                button.dataset.panel
+            )
+          );
+      });
+    });
+
+  document
+    .querySelectorAll("[data-filter]")
+    .forEach(button => {
+      button.addEventListener("click", () => {
+        filter = button.dataset.filter;
+
+        document
+          .querySelectorAll("[data-filter]")
+          .forEach(item =>
+            item.classList.toggle(
+              "active",
+              item === button
+            )
+          );
+
+        renderUnits();
+      });
+    });
+
+  element("search")
+    .addEventListener("input", event => {
+      search =
+        event.target.value
+          .trim()
+          .toLowerCase();
+
+      renderUnits();
+    });
+
+  element("multiplier")
+    .addEventListener("input", event => {
+      multiplier =
+        Math.max(
+          0,
+          Number(event.target.value) || 0
+        );
+
+      render();
+    });
+
+  element("current")
+    .addEventListener("click", () => {
+      projected = false;
+
+      element("current")
+        .classList.add("active");
+
+      element("projected")
+        .classList.remove("active");
+
+      render();
+    });
+
+  element("projected")
+    .addEventListener("click", () => {
+      projected = true;
+
+      element("projected")
+        .classList.add("active");
+
+      element("current")
+        .classList.remove("active");
+
+      render();
+    });
+
+  element("refresh")
+    .addEventListener("click", loadData);
+
+  loadData();
+
+  setInterval(
+    loadData,
+    REFRESH_TIME
+  );
+</script>
+</body>
+</html>
